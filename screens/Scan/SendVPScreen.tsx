@@ -268,7 +268,7 @@ export const SendVPScreen: React.FC<ScanLayoutProps> = props => {
 
   const noOfCardsSelected = controller.areAllVCsChecked
     ? Object.values(controller.vcsMatchingAuthRequest).length
-    : Object.keys(controller.selectedVCKeys).length;
+    : Object.values(controller.inputDescriptorIdToSelectedVcKeys).reduce((vcCount, arr) => vcCount + arr.length, 0);
 
   const cardsSelectedText =
     noOfCardsSelected === 1
@@ -339,7 +339,7 @@ export const SendVPScreen: React.FC<ScanLayoutProps> = props => {
                 ([inputDescriptorId, vcs]) =>
                   vcs.map(vcData => (
                     <VcItemContainer
-                      key={getVcKey(vcData)}
+                      key={`${getVcKey(vcData)}-${inputDescriptorId}`}
                       vcMetadata={vcData.vcMetadata}
                       margin="0 2 8 2"
                       onPress={controller.SELECT_VC_ITEM(
@@ -348,10 +348,9 @@ export const SendVPScreen: React.FC<ScanLayoutProps> = props => {
                       )}
                       selectable
                       selected={
-                        controller.areAllVCsChecked ||
-                        Object.keys(controller.selectedVCKeys).includes(
-                          getVcKey(vcData),
-                        )
+                        controller.areAllVCsChecked || (
+                            Object.keys(controller.inputDescriptorIdToSelectedVcKeys).includes(inputDescriptorId) && controller.inputDescriptorIdToSelectedVcKeys[inputDescriptorId].includes(getVcKey(vcData))
+                          )
                       }
                       flow={VCItemContainerFlowType.VP_SHARE}
                       isPinned={vcData.vcMetadata.isPinned}
