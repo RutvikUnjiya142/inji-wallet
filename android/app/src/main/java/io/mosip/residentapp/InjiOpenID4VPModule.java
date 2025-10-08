@@ -12,6 +12,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
@@ -20,6 +21,7 @@ import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.ReadableMapKeySetIterator;
 import com.facebook.react.bridge.ReadableType;
+import com.facebook.react.bridge.WritableMap;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -62,6 +64,7 @@ import io.mosip.openID4VP.authorizationResponse.vpTokenSigningResult.types.mdoc.
 import io.mosip.openID4VP.authorizationResponse.vpTokenSigningResult.types.mdoc.MdocVPTokenSigningResult;
 import io.mosip.openID4VP.authorizationResponse.vpTokenSigningResult.types.sdJwt.SdJwtVPTokenSigningResult;
 import io.mosip.openID4VP.constants.FormatType;
+import io.mosip.openID4VP.networkManager.NetworkResponse;
 import kotlinx.serialization.json.Json;
 
 public class InjiOpenID4VPModule extends ReactContextBaseJavaModule {
@@ -141,31 +144,40 @@ public class InjiOpenID4VPModule extends ReactContextBaseJavaModule {
 
     @ReactMethod
     private static void rejectWithOpenID4VPExceptions(Exception e, Promise promise) {
-        if (e instanceof OpenID4VPExceptions) {
-            OpenID4VPExceptions ex = (OpenID4VPExceptions) e;
-            promise.reject(ex.getErrorCode(), ex.getMessage(), ex);
+        if (e instanceof OpenID4VPExceptions exception) {
+            WritableMap errorMap = Arguments.createMap();
+            errorMap.putString("errorCode", exception.getErrorCode());
+            errorMap.putString("message", exception.getMessage());
+            errorMap.putString("response", exception.getResponse());
+
+            promise.reject(exception.getErrorCode(), exception.getMessage(), exception, errorMap);
         } else {
             promise.reject("ERR_UNKNOWN", e.getMessage(), e);
         }
     }
 
     @ReactMethod
-    public void sendErrorToVerifier(String errorMessage, String errorCode) {
-        OpenID4VPExceptions exception;
+    public void sendErrorToVerifier(String errorMessage, String errorCode, Promise promise) {
+        try {
+            OpenID4VPExceptions exception;
 
-        switch (errorCode) {
-            case ACCESS_DENIED:
-                exception = new OpenID4VPExceptions.AccessDenied(errorMessage, "InjiOpenID4VPModule");
-                break;
-            case INVALID_TRANSACTION_DATA:
-                exception = new OpenID4VPExceptions.InvalidTransactionData(errorMessage, "InjiOpenID4VPModule");
-                break;
-            default:
-                exception = new OpenID4VPExceptions.GenericFailure(errorMessage, "InjiOpenID4VPModule");
-                break;
+            switch (errorCode) {
+                case ACCESS_DENIED:
+                    exception = new OpenID4VPExceptions.AccessDenied(errorMessage, "InjiOpenID4VPModule");
+                    break;
+                case INVALID_TRANSACTION_DATA:
+                    exception = new OpenID4VPExceptions.InvalidTransactionData(errorMessage, "InjiOpenID4VPModule");
+                    break;
+                default:
+                    exception = new OpenID4VPExceptions.GenericFailure(errorMessage, "InjiOpenID4VPModule");
+                    break;
+            }
+
+            String verifierResponse = openID4VP.sendErrorResponseToVerifier(exception);
+            promise.resolve(verifierResponse);
+        } catch (Exception exception) {
+            rejectWithOpenID4VPExceptions(exception, promise);
         }
-
-        openID4VP.sendErrorToVerifier(exception);
     }
 
     private WalletMetadata parseWalletMetadata(ReadableMap walletMetadata) {
