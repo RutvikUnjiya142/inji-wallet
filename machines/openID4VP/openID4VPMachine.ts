@@ -82,7 +82,10 @@ export const openID4VPMachine = model.createMachine(
             target: 'getKeyPairFromKeystore',
           },
           onError: {
-            actions: 'setTrustedVerifiersApiCallError',
+            actions: [
+              'setTrustedVerifiersApiCallError',
+              'resetIsShowLoadingScreen',
+            ],
           },
         },
       },
@@ -442,6 +445,11 @@ export const openID4VPMachine = model.createMachine(
       shareVPDeclineStatusToVerifier: {
         invoke: {
           src: 'shareDeclineStatus',
+          onError: (_, event) =>
+            console.error(
+              'Failed to send decline status to verifier - ',
+              event.data,
+            ),
         },
         after: {
           200: {
