@@ -1,10 +1,12 @@
 fileignoreconfig:
+  - filename: components/VC/common/StatusInfoModal.tsx
+    checksum: 5db61aa419e0c1c70b067993272da93822917daa55523371fc196022bd7c25a3
   - filename: components/VC/Views/ShareableInfoModal.tsx
-    checksum: d056d7ba185363c585edd998f08e02de9023a6750f652a8fa7a9c99fceefd032
+    checksum: e89fb09400c82b0e8bade0c16ad168babd1182685773b982f83bfff250e9fdb4
   - filename: components/VC/common/VCProcessor.ts
-    checksum: ad4ed3148adc0f69d5a5d2431096229ea84b075f51d9fc3538112acee73cc338
+    checksum: e4d65665ce4ef34805578961e8dbfd9845ded937bebbe57e6da35098ad31fbd3
   - filename: components/VC/common/VCUtils.tsx
-    checksum: 39cac22342000243a314ed910258250a910bbe962de016964f2d2e840bb31038
+    checksum: 7894949f973ea15a532a5fc537e09c5993e5e54b763195302f999afe5fc87d03
   - filename: screens/Settings/KeyManagementScreen.tsx
     checksum: bcee7f81ce1bb46b73927834b3a2b84d86f7ef065a2731610cda7ea07edc041d
   - filename: screens/AuthScreenController.ts
@@ -430,8 +432,6 @@ fileignoreconfig:
     checksum: ea51350b13ce6287c8965d177bfef275e117e16e42c119f46c738a444dfc0beb
   - filename: shared/backupUtils/restoreData.ts
     checksum: 5fb43d26b6ef53f72c48dcdf611be12170c3859f81ffd405d15cfe2feaeac706
-  - filename: components/VC/common/VcStatustooTip.tsx
-    checksum: a48c88da719fadcb3d1aeb730a23735709c0c198351104203abd03445f6cc76f
   - filename: screens/Settings/KeyManagementScreen.tsx
     checksum: 6871fad16ecb5f019f502b2f7f715bc2a7b646ee08026b321aa1f8ce071dccc1
   - filename: shared/hooks/useScreenHeight.ts
