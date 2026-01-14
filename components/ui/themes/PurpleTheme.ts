@@ -1547,6 +1547,7 @@ export const PurpleTheme = {
   IssuersScreenStyles: StyleSheet.create({
     issuerListOuterContainer: {
       padding: 10,
+      paddingHorizontal: 20,
       flex: 1,
       backgroundColor: Colors.White,
     },
