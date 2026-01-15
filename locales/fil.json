@@ -1067,7 +1067,7 @@
     "successBanner": "Ang iyong backup ay matagumpay!",
     "backupFailed": "Nabigo ang pag-backup",
     "ok": "OK",
-    "help": "Tulong?"
+    "help": "?"
   },
   "WelcomeScreen": {
     "title": "Open Source Identity Solution",
