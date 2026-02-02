@@ -41,6 +41,15 @@ export async function request(
   const requestUrl = path.startsWith('https://') ? path : host + path;
   let response;
 
+  // DEBUG: Log the URL being fetched
+  console.log('========== API REQUEST DEBUG ==========');
+  console.log('MIMOTO_BASE_URL:', MIMOTO_BASE_URL);
+  console.log('Host param:', host);
+  console.log('Path:', path);
+  console.log('Full URL:', requestUrl);
+  console.log('Method:', method);
+  console.log('=======================================');
+
   try {
     if (timeoutMillis === undefined) {
       response = await fetch(requestUrl, {

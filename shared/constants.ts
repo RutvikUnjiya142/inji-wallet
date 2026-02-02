@@ -11,6 +11,10 @@ import {KeyTypes} from './cryptoutil/KeyTypes';
 
 export let MIMOTO_BASE_URL = MIMOTO_HOST;
 export let ESIGNET_BASE_URL = ESIGNET_HOST;
+
+// Debug: Log the MIMOTO URL at startup
+console.log('=== MIMOTO_BASE_URL ===', MIMOTO_BASE_URL);
+console.log('=== ESIGNET_BASE_URL ===', ESIGNET_BASE_URL);
 export const DEBUG_MODE_ENABLED = DEBUG_MODE === 'true';
 export let CACHE_TTL = 60 * 60 * 1000;
 

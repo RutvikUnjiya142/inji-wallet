@@ -169,8 +169,8 @@ android {
         debug {
             def keystore = file('debug.keystore')
             if (keystore.exists()) {
-                def keystoreAlias = System.getenv("DEBUG_KEYSTORE_ALIAS")
-                def keystorePass = System.getenv("DEBUG_KEYSTORE_PASSWORD")
+                def keystoreAlias = System.getenv("DEBUG_KEYSTORE_ALIAS") ?: "androiddebugkey"
+                def keystorePass = System.getenv("DEBUG_KEYSTORE_PASSWORD") ?: "android"
                 storeFile file("$keystore")
                 storePassword "$keystorePass"
                 keyAlias "$keystoreAlias"
