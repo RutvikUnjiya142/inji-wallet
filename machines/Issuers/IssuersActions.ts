@@ -29,7 +29,7 @@ import {NativeModules} from 'react-native';
 import {VCActivityLog} from '../../components/ActivityLogEvent';
 import {isNetworkError, parseJSON} from '../../shared/Utils';
 import {issuerType} from './IssuersMachine';
-import { RevocationStatus } from '../../shared/vcVerifier/VcVerifier';
+import {RevocationStatus} from '../../shared/vcVerifier/VcVerifier';
 
 const {RNSecureKeystoreModule} = NativeModules;
 export const IssuersActions = (model: any) => {
@@ -41,7 +41,7 @@ export const IssuersActions = (model: any) => {
           isVerified: true,
           isExpired: event.data.verificationErrorCode == EXPIRED_VC_ERROR_CODE,
           isRevoked: event.data.isRevoked,
-          lastKnownStatusTimestamp: new Date().toISOString()
+          lastKnownStatusTimestamp: new Date().toISOString(),
         }),
     }),
     resetVerificationResult: assign({
@@ -243,7 +243,26 @@ export const IssuersActions = (model: any) => {
       },
     }),
     setCredential: model.assign({
-      credential: (_: any, event: any) => event.data.credential,
+      credential: (_: any, event: any) => {
+        if (!event.data) {
+          console.error('setCredential: event.data is undefined');
+          return undefined;
+        }
+        if (!event.data.credential) {
+          console.error(
+            'setCredential: event.data.credential is undefined',
+            event.data,
+          );
+          return undefined;
+        }
+        return event.data.credential;
+      },
+    }),
+    setCredentialIssuerFromResponse: model.assign({
+      credentialOfferCredentialIssuer: (_: any, event: any) =>
+        event.data?.credentialIssuer || '',
+      isRawCredential: (_: any, event: any) =>
+        event.data?.isRawCredential || false,
     }),
     setQrData: model.assign({
       qrData: (_: any, event: any) => event.data,
@@ -265,7 +284,7 @@ export const IssuersActions = (model: any) => {
     }),
     setCredentialConfigurationId: model.assign({
       credentialConfigurationId: (_: any, event: any) => {
-        return event.data.credentialConfigurationId;
+        return event.data?.credentialConfigurationId || '';
       },
     }),
     setCredentialOfferCredentialType: model.assign({
@@ -274,7 +293,7 @@ export const IssuersActions = (model: any) => {
         const credentialConfigurationId = context.credentialConfigurationId;
         const issuerMetadata = context.selectedIssuerWellknownResponse;
         if (
-          issuerMetadata.credential_configurations_supported[
+          issuerMetadata?.credential_configurations_supported?.[
             credentialConfigurationId
           ]
         ) {
@@ -381,6 +400,9 @@ export const IssuersActions = (model: any) => {
 
     resetCredentialOfferFlowType: model.assign({
       isCredentialOfferFlow: (_: any, event: any) => {
+        return false;
+      },
+      isRawCredential: (_: any, event: any) => {
         return false;
       },
     }),

@@ -118,6 +118,7 @@ export const IssuersMachine = model.createMachine(
             actions: [
               'setCredential',
               'setCredentialConfigurationId',
+              'setCredentialIssuerFromResponse',
               model.assign({
                 authEndpointToOpen: false,
               }),
@@ -437,11 +438,12 @@ export const IssuersMachine = model.createMachine(
         invoke: {
           src: 'updateCredential',
           onDone: {
-            actions: [
-              'setVerifiableCredential',
-              'setCredentialWrapper',
-            ],
+            actions: ['setVerifiableCredential', 'setCredentialWrapper'],
             target: 'verifyingCredential',
+          },
+          onError: {
+            actions: ['setError', 'resetLoadingReason'],
+            target: 'error',
           },
         },
       },
@@ -708,7 +710,11 @@ export const IssuersMachine = model.createMachine(
         invoke: {
           src: 'verifyCredential',
           onDone: {
-            actions: ['sendSuccessEndEvent', 'setVerificationResult','resetCredentialOfferFlowType',],
+            actions: [
+              'sendSuccessEndEvent',
+              'setVerificationResult',
+              'resetCredentialOfferFlowType',
+            ],
             target: 'storing',
           },
           onError: [

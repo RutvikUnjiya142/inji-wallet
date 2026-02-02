@@ -13,11 +13,11 @@ import {
   verifyCredentialData,
 } from '../../shared/openId4VCI/Utils';
 import VciClient from '../../shared/vciClient/VciClient';
-import { displayType, issuerType } from './IssuersMachine';
-import { setItem } from '../store';
-import { API_CACHED_STORAGE_KEYS } from '../../shared/constants';
-import { createCacheObject } from '../../shared/Utils';
-import { VerificationResult } from '../../shared/vcjs/verifyCredential';
+import {displayType, issuerType} from './IssuersMachine';
+import {setItem} from '../store';
+import {API_CACHED_STORAGE_KEYS} from '../../shared/constants';
+import {createCacheObject} from '../../shared/Utils';
+import {VerificationResult} from '../../shared/vcjs/verifyCredential';
 
 export const IssuersService = () => {
   return {
@@ -200,9 +200,85 @@ export const IssuersService = () => {
         });
       };
 
+      // If the scanned QR content is a raw JSON credential (starts with '{'
+      // or is valid JSON), treat it as a direct credential and return it
+      // without invoking native VCI client which expects an offer/URL.
+      let qrDataString = '';
+      try {
+        // Handle both string and ReadableNativeMap/object types
+        if (typeof context.qrData === 'string') {
+          qrDataString = context.qrData;
+        } else if (context.qrData && typeof context.qrData === 'object') {
+          // If it's a ReadableNativeMap or plain object, stringify it
+          qrDataString = JSON.stringify(context.qrData);
+          console.log('QR data was object, stringified:', qrDataString);
+        } else {
+          qrDataString = String(context.qrData);
+        }
+
+        // Check if it looks like JSON (raw credential)
+        if (qrDataString && qrDataString.trim().startsWith('{')) {
+          const parsed = JSON.parse(qrDataString);
+          // Heuristic: if parsed looks like a VC (has vcVer or id or credential fields)
+          const looksLikeCredential = !!(
+            parsed.vcVer ||
+            parsed.credential ||
+            parsed.id ||
+            parsed['@context']
+          );
+          if (looksLikeCredential) {
+            console.log(
+              'Detected raw credential JSON in QR, processing locally',
+            );
+            // Extract issuer - try multiple possible fields
+            const issuerValue = parsed.issuer ?? parsed.credentialIssuer ?? '';
+            // For credentialIssuer, use id or construct a placeholder URL if empty
+            const credentialIssuerUrl =
+              issuerValue ||
+              (parsed.id && typeof parsed.id === 'string'
+                ? parsed.id.split('/credentials/')[0]
+                : '') ||
+              'local://raw-credential';
+
+            // Check if the raw data already has credentialSubject structure
+            // If not, wrap the raw data in a credentialSubject
+            const hasCredentialSubject = parsed.credentialSubject !== undefined;
+            const credentialData = hasCredentialSubject
+              ? parsed
+              : {
+                  '@context': ['https://www.w3.org/2018/credentials/v1'],
+                  type: ['VerifiableCredential'],
+                  id: parsed.id || `urn:uuid:${Date.now()}`,
+                  issuer: credentialIssuerUrl,
+                  issuanceDate: new Date().toISOString(),
+                  credentialSubject: parsed,
+                };
+
+            const response = {
+              // Match the format expected by VciClient.requestCredentialByOffer return value
+              credential: {
+                credential: credentialData,
+              },
+              credentialConfigurationId: parsed.vcVer || 'RawCredential',
+              credentialIssuer: credentialIssuerUrl,
+              // Mark this as a raw credential for downstream handling
+              isRawCredential: true,
+            };
+            console.log(
+              'Raw credential response:',
+              JSON.stringify(response, null, 2),
+            );
+            return response;
+          }
+        }
+      } catch (e) {
+        // If parsing fails, continue to call native flow below.
+        console.error('QR data processing error:', e);
+      }
+
       const credentialResponse =
         await VciClient.getInstance().requestCredentialByOffer(
-          context.qrData,
+          qrDataString,
           getTxCode,
           getSignedProofJwt,
           navigateToAuthView,
@@ -231,6 +307,11 @@ export const IssuersService = () => {
     },
 
     updateCredential: async (context: any) => {
+      console.log('updateCredential: context.credential =', context.credential);
+      if (!context.credential) {
+        console.error('updateCredential: credential is undefined in context');
+        throw new Error('Credential is undefined');
+      }
       const credential = await updateCredentialInformation(
         context,
         context.credential,
@@ -239,6 +320,38 @@ export const IssuersService = () => {
     },
     cacheIssuerWellknown: async (context: any) => {
       const credentialIssuer = context.credentialOfferCredentialIssuer;
+
+      // For raw credentials (scanned from QR without VCI flow), skip wellknown fetch
+      // and return minimal issuer metadata
+      if (
+        context.isRawCredential ||
+        !credentialIssuer ||
+        credentialIssuer.startsWith('local://')
+      ) {
+        const mockIssuerMetadata = {
+          credential_issuer: credentialIssuer || 'local://raw-credential',
+          credential_endpoint: '',
+          credential_configurations_supported: {
+            [context.credentialConfigurationId || 'RawCredential']: {
+              format: 'ldp_vc',
+              display: [
+                {
+                  name: 'Raw Credential',
+                  locale: 'en',
+                },
+              ],
+            },
+          },
+          display: [
+            {
+              name: 'Raw Credential Issuer',
+              locale: 'en',
+            },
+          ],
+        } as unknown as issuerType;
+        return mockIssuerMetadata;
+      }
+
       const issuerMetadata = (await VciClient.getInstance().getIssuerMetadata(
         credentialIssuer,
       )) as issuerType;
@@ -308,7 +421,24 @@ export const IssuersService = () => {
     },
 
     verifyCredential: async (context: any): Promise<VerificationResult> => {
-      const { isCredentialOfferFlow, verifiableCredential, selectedCredentialType } = context;
+      const {
+        isCredentialOfferFlow,
+        isRawCredential,
+        verifiableCredential,
+        selectedCredentialType,
+      } = context;
+
+      // Skip verification for raw credentials (JSON scanned from QR without VCI flow)
+      // as they don't have cryptographic proofs
+      if (isRawCredential) {
+        console.log('Skipping verification for raw credential');
+        return {
+          isVerified: true,
+          verificationMessage: 'Raw credential - verification skipped',
+          verificationErrorCode: '',
+        };
+      }
+
       if (isCredentialOfferFlow) {
         const configurations = await getAllConfigurations();
         if (configurations.disableCredentialOfferVcVerification) {
@@ -326,12 +456,11 @@ export const IssuersService = () => {
       if (!verificationResult.isVerified) {
         throw new Error(verificationResult.verificationErrorCode);
       }
-    
+
       return verificationResult;
-    }
-    
-}
-}
+    },
+  };
+};
 async function sendTokenRequest(
   tokenRequestObject: any,
   proxyTokenEndpoint: any = null,
